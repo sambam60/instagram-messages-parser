@@ -1,93 +1,72 @@
-/* ./styles/globals.css */
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb);
-  border-radius: 4px;
-  border: 2px solid var(--scrollbar-track);
-}
-
-/* Text Gradient */
-.text-gradient {
-  background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* Theme Colors */
 :root {
   --background: #ffffff;
-  --foreground: #111111;
+  --foreground: #1a1a1a;
+  --surface: #f8f9fa;
+  --surface-hover: #f0f1f3;
+  --surface-active: #e8e9eb;
+  --border: #e2e4e8;
+  --muted: #6b7280;
+  --accent: #5b5ef6;
+  --accent-light: #ededff;
+  --sent-bg: #5b5ef6;
+  --sent-text: #ffffff;
+  --received-bg: #f0f1f3;
+  --received-text: #1a1a1a;
+  --input-bg: #f0f1f3;
   --scrollbar-track: #f1f1f1;
-  --scrollbar-thumb: #c1c1c1;
-  --box-border: #e5e5e5;
-  --input-bg: #ffffff;
-  --input-text: #111111;
+  --scrollbar-thumb: #c8c8c8;
 }
 
 .dark {
-  --background: #121212;
-  --foreground: #e5e5e5;
-  --scrollbar-track: #333333;
-  --scrollbar-thumb: #555555;
-  --box-border: #444444;
-  --input-bg: #1e1e1e;
-  --input-text: #e5e5e5;
+  --background: #0f0f0f;
+  --foreground: #e8e8e8;
+  --surface: #1a1a1a;
+  --surface-hover: #242424;
+  --surface-active: #2e2e2e;
+  --border: #2e2e2e;
+  --muted: #888888;
+  --accent: #7b7ef8;
+  --accent-light: #1e1e3a;
+  --sent-bg: #5b5ef6;
+  --sent-text: #ffffff;
+  --received-bg: #242424;
+  --received-text: #e8e8e8;
+  --input-bg: #1a1a1a;
+  --scrollbar-track: #1a1a1a;
+  --scrollbar-thumb: #444444;
 }
 
 body {
-  @apply bg-background text-foreground transition-colors duration-300;
-  font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI', sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: background-color 0.2s, color 0.2s;
 }
 
-/* Define custom Tailwind classes under `@layer components` */
-@layer components {
-  .bg-input-bg {
-    background-color: var(--input-bg);
-  }
-  
-  .text-input-text {
-    color: var(--input-text);
-  }
-
-  .border-box-border {
-    border-color: var(--box-border);
-  }
-
-  /* Apply box borders to containers */
-  .container, .box, .card, .input {
-    @apply border border-box-border bg-background dark:bg-input-bg text-foreground dark:text-input-text rounded-md;
-  }
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted);
 }
 
-/* Header and Footer */
-.header, .footer {
-  @apply bg-gray-100 dark:bg-gray-900 text-foreground;
+/* Focus styles */
+button:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-
-/* ScrollArea Adjustments */
-.scroll-area {
-  @apply bg-background text-foreground dark:bg-background dark:text-foreground transition-colors duration-300;
-}
-
-/* Remove default outlines and use focus rings */
-button:focus, input:focus, textarea:focus {
+button:focus:not(:focus-visible), input:focus:not(:focus-visible) {
   outline: none;
-  @apply ring-2 ring-blue-500 ring-offset-2;
-}
-
-button, input, textarea {
-  @apply focus:outline-none;
 }

@@ -1,139 +1,198 @@
-// app/page.tsx
-
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import UploadForm from './components/UploadForm'
 import ConversationsList from './components/ConversationsList'
 import MessagesView from './components/MessagesView'
+import CalendarNav from './components/CalendarNav'
 import { Conversation } from './types'
 import { decodeUnicode } from '../lib/decodeUnicode'
 import DarkModeToggle from './components/DarkModeToggle'
-import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, MessageCircle, Users, Calendar } from 'lucide-react'
 
 const HomePage: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
-  const [yourName, setYourName] = useState<string>('')
-  const [debugLogs, setDebugLogs] = useState<string[]>([])
-  const [uploadCollapsed, setUploadCollapsed] = useState<boolean>(false)
   const [searchConvo, setSearchConvo] = useState<string>('')
   const [searchMessage, setSearchMessage] = useState<string>('')
-  const [debugCollapsed, setDebugCollapsed] = useState<boolean>(false)
+  const [showMessageSearch, setShowMessageSearch] = useState(false)
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [scrollToTimestamp, setScrollToTimestamp] = useState<number | null>(null)
+  const scrollCounter = useRef(0)
 
   const handleUploadSuccess = (uploadedConversations: Conversation[]) => {
     setConversations(prev => [...prev, ...uploadedConversations])
-    addDebugLog('Conversations successfully uploaded and set.')
+    setIsLoading(false)
   }
 
   const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation)
-    addDebugLog(`Selected Conversation: "${conversation.title}"`)
+    setSearchMessage('')
+    setShowMessageSearch(false)
+    setShowCalendar(false)
+    setScrollToTimestamp(null)
   }
 
-  const addDebugLog = (message: string) => {
-    setDebugLogs(prevLogs => [...prevLogs, message])
+  const handleCalendarDateSelect = (timestamp: number) => {
+    // Add a tiny offset each time so even clicking the same date triggers a new effect
+    scrollCounter.current += 1
+    setScrollToTimestamp(timestamp + scrollCounter.current * 0.001)
   }
 
-  const filteredConversations = conversations.filter(conv => decodeUnicode(conv.title).toLowerCase().includes(searchConvo.toLowerCase()))
+  const filteredConversations = conversations.filter(conv =>
+    decodeUnicode(conv.title).toLowerCase().includes(searchConvo.toLowerCase())
+  )
 
-  const filteredMessages = selectedConversation ? selectedConversation.messages.filter(msg => decodeUnicode(msg.content || '').toLowerCase().includes(searchMessage.toLowerCase())) : []
+  const filteredMessages = selectedConversation
+    ? selectedConversation.messages.filter(msg =>
+        searchMessage
+          ? decodeUnicode(msg.content || '').toLowerCase().includes(searchMessage.toLowerCase())
+          : true
+      )
+    : []
+
+  const hasConversations = conversations.length > 0
 
   return (
-    <div className="flex h-screen bg-background dark:bg-background text-foreground">
+    <div className="flex h-screen bg-background text-foreground">
       {/* Sidebar */}
-      <div className="w-1/4 border-r border-box-border flex flex-col bg-background text-foreground">
-        <div className="p-4 border-b border-box-border flex items-center justify-between">
-          <span className="text-lg font-bold"></span>
-          <input
-            type="text"
-            value={yourName}
-            onChange={(e) => setYourName(e.target.value)}
-            placeholder="Enter your name"
-            className="shadow appearance-none border border-box-border rounded w-full py-2 px-3 text-input-text bg-input-bg leading-tight focus:ring focus:ring-blue-500"
-          />
-        </div>
-        <div className="p-4 border-b border-box-border flex items-center justify-between">
-          <button
-            onClick={() => setUploadCollapsed(!uploadCollapsed)}
-            className="flex items-center justify-center w-full text-gray-500 dark:text-gray-400 focus:ring focus:ring-blue-500"
-          >
-            {uploadCollapsed ? <ChevronDown /> : <ChevronUp />}
-          </button>
-        </div>
-        {!uploadCollapsed && (
-          <div className="p-4 border-b border-box-border">
-            <UploadForm onUploadSuccess={handleUploadSuccess} addDebugLog={addDebugLog} />
-          </div>
-        )}
-        {conversations.length > 0 && (
-          <div className="p-4">
-            <input
-              type="text"
-              placeholder="Search Conversations"
-              value={searchConvo}
-              onChange={(e) => setSearchConvo(e.target.value)}
-              className="w-full p-2 bg-input-bg text-input-text border border-box-border rounded-md focus:ring focus:ring-blue-500"
-            />
-          </div>
-        )}
-        <div className="flex-1 overflow-hidden">
-          <ConversationsList
-            conversations={filteredConversations}
-            onSelectConversation={handleSelectConversation}
-            selectedConversation={selectedConversation}
-            yourName={yourName}
-          />
-        </div>
-      </div>
-
-      {/* Conversation View */}
-      <div className="flex-1 flex flex-col bg-background dark:bg-background text-foreground">
-        <div className="px-4 py-2 border-b border-box-border flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
-            {selectedConversation ? decodeUnicode(selectedConversation.title) : 'Select a conversation'}
-          </h2>
-          <div className="flex items-center space-x-4">
-            <input
-              type="text"
-              placeholder="🔎"
-              value={searchMessage}
-              onChange={(e) => setSearchMessage(e.target.value)}
-              className="w-1/5 p-2 bg-input-bg text-input-text border border-box-border rounded-md focus:ring focus:ring-blue-500"
-            />
+      <div className="w-80 min-w-[320px] border-r border-border flex flex-col bg-background">
+        {/* Sidebar header */}
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-lg font-semibold tracking-tight">Messages</h1>
             <DarkModeToggle />
           </div>
-        </div>
-        <div className="flex-1 overflow-hidden">
-          {selectedConversation ? (
-            <MessagesView messages={filteredMessages} yourName={yourName} />
+          {!hasConversations ? (
+            <UploadForm
+              onUploadSuccess={handleUploadSuccess}
+              isLoading={isLoading}
+              setIsLoading={setIsLoading}
+            />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              <p>Select a conversation to view messages</p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchConvo}
+                onChange={(e) => setSearchConvo(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm bg-input-bg text-foreground rounded-lg border-none placeholder:text-muted"
+              />
             </div>
           )}
         </div>
+
+        {/* Conversation list */}
+        <div className="flex-1 overflow-y-auto">
+          {hasConversations ? (
+            <ConversationsList
+              conversations={filteredConversations}
+              onSelectConversation={handleSelectConversation}
+              selectedConversation={selectedConversation}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-muted px-8 text-center">
+              <MessageCircle className="w-10 h-10 mb-3 opacity-40" />
+              <p className="text-sm">Upload your Instagram data export ZIP to get started</p>
+            </div>
+          )}
+        </div>
+
+        {/* Upload another file when conversations exist */}
+        {hasConversations && (
+          <div className="p-3 border-t border-border">
+            <UploadForm
+              onUploadSuccess={handleUploadSuccess}
+              isLoading={isLoading}
+              setIsLoading={setIsLoading}
+              compact
+            />
+          </div>
+        )}
       </div>
 
-      {/* Debug Logs */}
-      <div className={`flex flex-col ${debugCollapsed ? 'w-10' : 'w-1/4'} bg-background dark:bg-background border-box-border border-l overflow-y-auto transition-width duration-300`}>
-        <button
-          onClick={() => setDebugCollapsed(!debugCollapsed)}
-          className="p-2 bg-input-bg dark:bg-input-bg text-gray-600 dark:text-gray-400 focus:ring focus:ring-blue-500"
-          aria-label="Toggle Debug Panel"
-        >
-          {debugCollapsed ? <ChevronLeft /> : <ChevronRight />}
-        </button>
-        {!debugCollapsed && debugLogs.length > 0 && (
-          <div className="p-4">
-            <h2 className="text-xl font-semibold mb-4">Debug Logs</h2>
-            <ul className="space-y-2">
-              {debugLogs.map((log, index) => (
-                <li key={index} className="text-sm text-foreground dark:text-input-text">
-                  {log}
-                </li>
-              ))}
-            </ul>
+      {/* Main conversation view */}
+      <div className="flex-1 flex flex-col bg-background min-w-0">
+        {selectedConversation ? (
+          <>
+            {/* Conversation header */}
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold truncate">
+                  {decodeUnicode(selectedConversation.title)}
+                </h2>
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <Users className="w-3 h-3" />
+                  <span>{selectedConversation.participants.length} participants</span>
+                  <span className="text-border">|</span>
+                  <span>{selectedConversation.messages.length.toLocaleString()} messages</span>
+                  {searchMessage && (
+                    <>
+                      <span className="text-border">|</span>
+                      <span className="text-accent">{filteredMessages.length.toLocaleString()} matches</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                {showMessageSearch && (
+                  <input
+                    type="text"
+                    placeholder="Search messages..."
+                    value={searchMessage}
+                    onChange={(e) => setSearchMessage(e.target.value)}
+                    autoFocus
+                    className="w-56 px-3 py-1.5 text-sm bg-input-bg text-foreground rounded-lg border-none placeholder:text-muted"
+                  />
+                )}
+                <button
+                  onClick={() => {
+                    setShowMessageSearch(!showMessageSearch)
+                    if (showMessageSearch) setSearchMessage('')
+                  }}
+                  className={`p-2 rounded-lg transition-colors ${
+                    showMessageSearch ? 'bg-accent-light text-accent' : 'hover:bg-surface-hover text-muted'
+                  }`}
+                  aria-label="Search messages"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    showCalendar ? 'bg-accent-light text-accent' : 'hover:bg-surface-hover text-muted'
+                  }`}
+                  aria-label="Calendar navigation"
+                >
+                  <Calendar className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Calendar panel (slides down below header) */}
+            {showCalendar && (
+              <div className="border-b border-border bg-background flex justify-center">
+                <CalendarNav
+                  messages={selectedConversation.messages}
+                  onSelectDate={handleCalendarDateSelect}
+                />
+              </div>
+            )}
+
+            {/* Messages */}
+            <div className="flex-1 overflow-hidden">
+              <MessagesView
+                messages={filteredMessages}
+                scrollToTimestamp={scrollToTimestamp}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-muted">
+            <MessageCircle className="w-12 h-12 mb-4 opacity-30" />
+            <p className="text-base">Select a conversation to view messages</p>
           </div>
         )}
       </div>

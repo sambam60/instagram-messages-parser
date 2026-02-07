@@ -1,5 +1,3 @@
-// app/types.ts
-
 export interface Participant {
   name: string;
 }
@@ -19,6 +17,12 @@ export interface AudioFile {
   type: string;
 }
 
+export interface Share {
+  link?: string;
+  share_text?: string;
+  original_content_owner?: string;
+}
+
 export interface Message {
   sender_name: string;
   timestamp_ms: number;
@@ -27,7 +31,8 @@ export interface Message {
   type?: string;
   photos?: Photo[];
   videos?: Video[];
-  audio_files?: AudioFile[]; // Support for audio files
+  audio_files?: AudioFile[];
+  share?: Share;
 }
 
 export interface Conversation {

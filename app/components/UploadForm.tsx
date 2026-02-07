@@ -1,49 +1,44 @@
-// app/components/UploadForm.tsx
-
 'use client'
 
 import React, { useState } from 'react'
-import { Upload } from 'lucide-react'
-import { Button } from "../components/ui/button"
+import { Upload, Loader2 } from 'lucide-react'
 import { Conversation } from '../types'
 
 interface UploadFormProps {
   onUploadSuccess: (conversations: Conversation[]) => void
-  addDebugLog: (message: string) => void
+  isLoading: boolean
+  setIsLoading: (loading: boolean) => void
+  compact?: boolean
 }
 
-const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess, addDebugLog }) => {
-  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
+const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess, isLoading, setIsLoading, compact = false }) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [error, setError] = useState<string>('')
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError('')
-    setSelectedFiles(e.target.files)
-    addDebugLog('File selected for upload.')
+    const file = e.target.files?.[0] || null
+    setSelectedFile(file)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!selectedFiles || selectedFiles.length === 0) {
-      const errorMsg = 'Please select at least one ZIP file.'
-      setError(errorMsg)
-      addDebugLog(errorMsg)
+    if (!selectedFile) {
+      setError('Please select a ZIP file.')
       return
     }
 
-    const file = selectedFiles[0]
-    if (!file.name.endsWith('.zip')) {
-      const errorMsg = 'Please upload a valid ZIP file.'
-      setError(errorMsg)
-      addDebugLog(errorMsg)
+    if (!selectedFile.name.endsWith('.zip')) {
+      setError('Please upload a valid ZIP file.')
       return
     }
 
-    addDebugLog(`Uploading ${file.name} as ZIP file.`)
+    setIsLoading(true)
+    setError('')
 
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', selectedFile)
 
     try {
       const response = await fetch('/api/upload', {
@@ -65,57 +60,89 @@ const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess, addDebugLog })
             const parsed = JSON.parse(partialData)
             if (parsed.conversations) {
               onUploadSuccess(parsed.conversations)
-              addDebugLog('Conversations uploaded successfully.')
+              setSelectedFile(null)
               partialData = ''
             }
-          } catch {}
+          } catch {
+            // JSON not complete yet, continue reading
+          }
         }
       }
-    } catch (error) {
-      const errorMsg = 'An error occurred during the upload.'
-      setError(errorMsg)
-      addDebugLog(errorMsg)
+    } catch {
+      setError('Upload failed. Please try again.')
+      setIsLoading(false)
     }
   }
 
-  return (
-    <div className="w-full">
-      <form onSubmit={handleSubmit} className="flex flex-col items-center">
-        <label htmlFor="fileInput" className="cursor-pointer">
-          <div className="flex items-center justify-center w-12 h-12 bg-blue-500 dark:bg-blue-700 rounded-full">
-            <Upload className="w-6 h-6 text-white" />
-          </div>
+  if (compact) {
+    return (
+      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        <label
+          htmlFor="fileInputCompact"
+          className="flex-1 flex items-center gap-2 px-3 py-2 text-xs text-muted bg-surface-hover rounded-lg cursor-pointer hover:bg-surface-active transition-colors"
+        >
+          <Upload className="w-3.5 h-3.5" />
+          {selectedFile ? selectedFile.name : 'Add another ZIP...'}
         </label>
         <input
-          id="fileInput"
+          id="fileInputCompact"
           type="file"
           accept=".zip"
           className="hidden"
           onChange={handleFileChange}
         />
-        <p className="text-sm text-gray-500 mt-2 text-center dark:text-gray-400">
-          Upload Instagram DMs ZIP File
-        </p>
-
-        {selectedFiles && (
-          <div className="mt-2 w-full text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              {Array.from(selectedFiles).length} file(s) selected
-            </p>
-          </div>
+        {selectedFile && (
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="px-3 py-2 text-xs font-medium bg-accent text-white rounded-lg disabled:opacity-50 hover:opacity-90 transition-opacity"
+          >
+            {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Parse'}
+          </button>
         )}
-
-        {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-
-        <Button
-          type="submit"
-          disabled={!selectedFiles}
-          className="mt-4 w-full max-w-xs"
-        >
-          Parse ZIP
-        </Button>
       </form>
-    </div>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <label
+        htmlFor="fileInput"
+        className="flex flex-col items-center gap-2 p-6 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-muted hover:bg-surface transition-colors"
+      >
+        <Upload className="w-6 h-6 text-muted" />
+        <div className="text-center">
+          <p className="text-sm font-medium text-foreground">
+            {selectedFile ? selectedFile.name : 'Choose ZIP file'}
+          </p>
+          <p className="text-xs text-muted mt-0.5">Instagram data export</p>
+        </div>
+      </label>
+      <input
+        id="fileInput"
+        type="file"
+        accept=".zip"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
+      <button
+        type="submit"
+        disabled={!selectedFile || isLoading}
+        className="w-full py-2.5 text-sm font-medium bg-accent text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Parsing...
+          </>
+        ) : (
+          'Parse ZIP'
+        )}
+      </button>
+    </form>
   )
 }
 

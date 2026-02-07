@@ -1,5 +1,3 @@
-// app/components/DarkModeToggle.tsx
-
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -10,7 +8,8 @@ const DarkModeToggle: React.FC = () => {
 
   useEffect(() => {
     const root = window.document.documentElement
-    const initialDarkMode = root.classList.contains('dark') || 
+    const initialDarkMode =
+      root.classList.contains('dark') ||
       (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
     setIsDarkMode(initialDarkMode)
     if (initialDarkMode) {
@@ -35,10 +34,10 @@ const DarkModeToggle: React.FC = () => {
   return (
     <button
       onClick={toggleDarkMode}
-      className="p-2 rounded-full transition-colors duration-300 hover:bg-gray-300 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500"
+      className="p-2 rounded-lg transition-colors hover:bg-surface-hover text-muted"
       aria-label="Toggle dark mode"
     >
-      {isDarkMode ? <Sun className="text-yellow-500" /> : <Moon className="text-gray-500" />}
+      {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
     </button>
   )
 }

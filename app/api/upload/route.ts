@@ -27,8 +27,8 @@ export async function POST(req: Request) {
     const zipEntries: IZipEntry[] = zip.getEntries();
 
     const conversations: Conversation[] = [];
-    const MAX_CONVERSATIONS = 100; 
-    const MAX_MESSAGES_PER_CONVERSATION = 100; 
+    const MAX_CONVERSATIONS = 1000; 
+    const MAX_MESSAGES_PER_CONVERSATION = 50000; 
 
     const mediaFiles: { [filename: string]: { uri: string; type: 'photo' | 'video' | 'audio' } } = {};
 
@@ -38,38 +38,35 @@ export async function POST(req: Request) {
         return;
       }
 
-      const conversationFolder = pathParts[1];
       const fileName = pathParts[pathParts.length - 1];
-      const subPath = pathParts.slice(2);
+      const lowerParts = pathParts.map(p => p.toLowerCase());
+      const mediaTypeFolder = lowerParts.find(p => ['photos', 'videos', 'audio'].includes(p));
 
-      if (subPath.length > 0) {
-        const mediaTypeFolder = subPath[0].toLowerCase();
-        if (['photos', 'videos', 'audio'].includes(mediaTypeFolder)) {
-          const mediaType: 'photo' | 'video' | 'audio' =
-            mediaTypeFolder === 'photos' ? 'photo' :
-            mediaTypeFolder === 'videos' ? 'video' :
-            'audio';
+      if (mediaTypeFolder && fileName) {
+        const mediaType: 'photo' | 'video' | 'audio' =
+          mediaTypeFolder === 'photos' ? 'photo' :
+          mediaTypeFolder === 'videos' ? 'video' :
+          'audio';
 
-          const mediaBuffer = zip.readFile(entry);
-          if (mediaBuffer) {
-            let mimeType: string;
-            if (mediaType === 'photo') {
-              if (fileName.toLowerCase().endsWith('.png')) {
-                mimeType = 'image/png';
-              } else {
-                mimeType = 'image/jpeg'; 
-              }
-            } else if (mediaType === 'video') {
-              mimeType = 'video/mp4';
-            } else { // audio
-              mimeType = 'audio/mpeg';
+        const mediaBuffer = zip.readFile(entry);
+        if (mediaBuffer) {
+          let mimeType: string;
+          if (mediaType === 'photo') {
+            if (fileName.toLowerCase().endsWith('.png')) {
+              mimeType = 'image/png';
+            } else {
+              mimeType = 'image/jpeg'; 
             }
-            const mediaUri = `data:${mimeType};base64,${mediaBuffer.toString('base64')}`;
-            mediaFiles[fileName] = { uri: mediaUri, type: mediaType };
-            console.log(`Stored media file: ${fileName} as ${mediaType}`);
-          } else {
-            console.warn(`Failed to read media file: ${fileName}`);
+          } else if (mediaType === 'video') {
+            mimeType = 'video/mp4';
+          } else { // audio
+            mimeType = 'audio/mpeg';
           }
+          const mediaUri = `data:${mimeType};base64,${mediaBuffer.toString('base64')}`;
+          mediaFiles[fileName] = { uri: mediaUri, type: mediaType };
+          console.log(`Stored media file: ${fileName} as ${mediaType}`);
+        } else {
+          console.warn(`Failed to read media file: ${fileName}`);
         }
       }
     });
@@ -82,14 +79,15 @@ export async function POST(req: Request) {
 
       console.log(`Processing entry: ${entry.entryName}`);
       const pathParts = entry.entryName.split('/');
-      if (pathParts.length < 2 || pathParts[0].toLowerCase() !== 'inbox') {
+      const inboxIndex = pathParts.findIndex(part => part.toLowerCase() === 'inbox');
+      if (inboxIndex === -1 || inboxIndex + 1 >= pathParts.length) {
         console.warn(`Skipping entry not in 'inbox/' folder: ${entry.entryName}`);
         return;
       }
 
-      const conversationFolder = pathParts[1];
+      const conversationFolder = pathParts[inboxIndex + 1];
       const fileName = pathParts[pathParts.length - 1];
-      const subPath = pathParts.slice(2);
+      const subPath = pathParts.slice(inboxIndex + 2);
 
       if (fileName.startsWith('message') && fileName.endsWith('.json')) {
         let conversation = conversations.find(conv => conv.thread_path === conversationFolder);
